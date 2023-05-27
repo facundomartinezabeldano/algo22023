@@ -160,7 +160,7 @@ Implementacion Puesto:
         huboDescuento(in pdc: puesto, in p: persona, in i: item) -> res: bool
 
             pre:{true}
-            post:{ res = def?() } //Hubo descuento si compro la cantidad necesaria de ese item en ese puesto, sigo sin estar muy seguro de esto...
+            post:{res = def?()} //Hubo descuento si compro la cantidad necesaria de ese item en ese puesto, sigo sin estar muy seguro de esto...
             Complejidad:
             Aliasing:
             Descripcion: Retorna si hubo descuento o no durante la compra del item en el puesto.

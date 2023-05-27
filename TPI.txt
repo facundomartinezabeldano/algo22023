@@ -127,7 +127,7 @@ Implementacion Puesto:
 
         verPrecio(in pdc: puesto, in i: item) -> res:dinero
 
-            pre:{i e claves(menu(pdc))}
+            pre:{i e menu(pdc)}
             post:{precio(pdc,i) = res}
             Complejidad: O(log(I))
             Aliasing: Devuelve una copia del precio del item.
@@ -135,7 +135,7 @@ Implementacion Puesto:
 
         verStock(in pdc: puesto, in i: item) -> res:nat
 
-            pre:{i e claves(menu(pdc))}
+            pre:{i e menu(pdc)}
             post:{obtener(i, stock(pdc)) = res}
             Complejidad: O(log(I))
             Aliasing: Devuelve una copia del stock del item.
@@ -143,7 +143,7 @@ Implementacion Puesto:
 
         verDescuento(in pdc: puesto, in i: item, in cant: cantidad) -> res: dinero
 
-            pre:{i e claves(menu(pdc))}
+            pre:{i e menu(pdc)}
             post:{res = descuento(pdc,i,cant)} 
             Complejidad: O(log(I) + log(cant))
             Aliasing: Devuelve una copia del descuento del item.
@@ -151,19 +151,19 @@ Implementacion Puesto:
 
         stockSuficiente(in pdc: puesto, in i: item, in cant: cantidad) -> res: bool
 
-            pre:{i e claves(menu(pdc))}
+            pre:{i e menu(pdc)}
             post:{res = stock(pdc, i) >= cant}
             Complejidad:
             Aliasing:
             Descripcion: Retorna si hay stock suficiente del item en el puesto.
 
-        huboDescuento(in pdc: puesto, in p: persona, in i: item) -> res: bool
+        huboDescuento?(in pdc: puesto, in p: persona, in i: item) -> res: bool
 
-            pre:{true}
-            post:{res = def?()} //Hubo descuento si compro la cantidad necesaria de ese item en ese puesto, sigo sin estar muy seguro de esto...
+            pre:{i e menu(pdc)}
+            post:{res = (existe c:nat)(existe t:tupla<item,c>)(t e ventas(pdc, p) y ¿t[0] = i? ¿=>L? descuento(pdc, i, c)=t[1])} // Me fijo si se hizo una venta de el item y si se hizo, fijarme si la cant que vendi es igual a alguno de los descuento que tiene ese producto
             Complejidad:
-            Aliasing:
-            Descripcion: Retorna si hubo descuento o no durante la compra del item en el puesto.
+            Aliasing: Como devuelte un bool, no hay aliasing.
+            Descripcion: Retorna si hubo descuento o no durante la venta del item en el puesto.
 
         gastosEnPuesto(in pdc: puesto, in p: persona) -> res: dinero
 

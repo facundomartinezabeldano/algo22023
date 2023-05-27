@@ -2,137 +2,154 @@ Implementacion Lolla:
 
     Interfaz: 
 
-        iniciarLolla(in puestos: dicc(puestoid, puesto), in personas: conj(persona)) --> res = Lolla
+        IniciarLolla(in puestos: dicc(puestoid, puesto), in personas: conj(persona)) -> res:Lolla
 
-            pre:{!vacio?(personas) & !vacio?(claves(puestos)) & vendenAlMismopre:cio(significados(puestos)) & noVendieronAun(significados(puestos))}
+            pre:{!vacio?(personas) & !vacio?(claves(puestos)) & vendenAlMismoPrecio(significados(puestos)) & noVendieronAun(significados(puestos))}
             post:{crearLolla(puestos, personas) = res}
             Complejidad:
             Aliasing:
-            Descripcion: Dados un conjunto de personas y puestos crea un Lolla. 
+            Descripcion: Dados un conjunto de personas y puestos crea un Lolla.
             
 
-        vender(inout l: lolla, in pid: puestoId, in p: persona, in i: item, in cant: cantidad)
+        Vender(inout l: lolla, in pid: puestoId, in p: persona, in i: item, in cant: cantidad)
             
             pre:{l = l0 & obtener(pid, puestos(l)) e puestos(l) & p e personas(l) 
                 & item e menu(obtener(pid, puestos(l))) & haySuficiente?(obtener(pid, puestos(l)), i, cant)}
-            post:{l0 = vender(l, pid, p, i, cant)}
+            post:{l = vender(l0, pid, p, i, cant)}
             Complejidad: O(log(A) + log(I) + log(P) + log(cant))
             Aliasing:
-            Descripcion: Dados un lolla, un id de un puesto, una persona, un item y una cantidad. Si es posible se realiza la venta del item
-            dado en la cantidad especificada.
+            Descripcion: Dados un lolla, un id de un puesto, una persona, un item y una cantidad...
 
-        hackearLolla(inout l: lolla, in p: persona, in i: item)
+        HackearLolla(inout l: lolla, in p: persona, in i: item)
 
             pre:{l = l0 & p e personas(l) & item & consumioSinPromoEnAlgunPuesto(l, p, i)}
-            post:{l0 = hackear(l, p, i)}
+            post:{l = hackear(l0, p, i)}
             Complejidad: O(log(A) + log(I)) || O(log(A) + log(I) + log(P))
             Aliasing:
             Descripcion: Dado un lolla, una persona valida y un item. Si la persona consumio ese item sin descuento, se le resta una unidad
             de ese item al consumo de la persona y se repone el stock del puesto en el cual se produjo la venta.
 
-        verPuestos(in l: lolla) --> res = dicc(puestoId, puesto)
+        VerPuestos(in l: lolla) -> res = dicc(puestoId, puesto)
 
             pre:{true}
-            post:{res =obs puestos(l)}
+            post:{res = puestos(l)}
             Complejidad: O(1)
             Aliasing:
             Descripcion: Dado un lolla, retorna un diccionario con sus puestos.
 
-        verPersonas(in l: lolla) --> res = conj(persona)
+        VerPersonas(in l: lolla) -> res:conj(persona)
 
             pre:{true}
-            post:{res =obs personas(l)}
+            post:{res = personas(l)}
             Complejidad: O(1)
-            Aliasing:
+            Aliasing: Devuelve una referencia no modificable al conjunto de personas del lolla.
             Descripcion: Dado un lolla, retorna un conjunto con sus personas.
 
-        gastoTotalPersona(in l: lolla, in p: persona) --> res = nat
+        GastoTotalPersona(in l: lolla, in p: persona) -> res:dinero
 
             pre:{p e personas(l)}
-            post:{}
+            post:{res = gastoTotal(l,p)}
             Complejidad: O(log(A))
-            Aliasing:
+            Aliasing: Devuelve una copia del gasto total de la persona.
             Descripcion: Dado un lolla y una persona, retorna el gasto total de la persona en el lolla.
 
-        personaQueMasGasto(in l: lolla, in personas: conj(persona)) --> res = persona
+        PersonaQueMasGasto(in l: lolla, in ps: conj(persona)) -> res:persona
 
-            pre:{personas =obs personas(l)}
-            post:{}
+            pre:{ps = personas(l) && !vacio?(ps)}
+            post:{res = masGasto(l)}
             Complejidad: O(1)
-            Aliasing:
+            Aliasing: Devuelve una copia de la persona que mas gasto.
             Descripcion: Dado un lolla y un conjunto de personas, todas pertenecientes al lolla devuelve la que mas gasto.
 
-        verStock(in l: lolla, in p: puesto, in i: item) --> res = nat
+        //No se si es necesario
+        // verStock(in l: lolla, in p: puesto, in i: item) -> res = nat
 
-            pre:{p e puestos(l) && i e menu(p)}
-            post:{}
-            Complejidad:
-            Aliasing:
-            Descripcion: Dado un lolla, un puesto perteneciente y un item devuelve su stock en ese puesto.
+        //     pre:{p e puestos(l) && i e menu(p)}
+        //     post:{}
+        //     Complejidad:
+        //     Aliasing:
+        //     Descripcion: Dado un lolla, un puesto perteneciente y un item devuelve su stock en ese puesto.
 
-        menorStock(in l: lolla, in i: item) --> res = puestoId 
+        MenorStock(in l: lolla, in i: item) -> res: puestoId 
 
-            pre:{}
-            post:{}
+            pre:{ExistePuestoConStock(puestos(l), i)} //Habria que hacer este predicado auxiliar.
+            post:{res = menorStock(l, i)}
             Complejidad: //No hay restriccion
             Aliasing:
             Descripcion: Dado un lolla y un item retorna el puesto que tiene menor stock de ese item.
 
+    Representacion:
 
+        Lolla se representa con estr donde 
+            estr = <
+                    puestos: diccLog(puestoId, puesto),
+                    personas: conjLog(persona), //Convendra tenerlas en un heap? para poder sacar el maximo facilmente?
+                    personasPorDinero: diccHeap(persona,dinero)
+                    >
+    Algoritmos:
+        iIniciarLolla(in puestos: dicc(puestoid, puesto), in personas: conj(persona)) -> res: Lolla
+        iVender(inout l: lolla, in pid: puestoId, in p: persona, in i: item, in cant: cantidad)
+        iHackearLolla(inout l: lolla, in p: persona, in i: item)
+        iVerPuestos(in l: lolla) -> res = dicc(puestoId, puesto)
+        iVerPersonas(in l: lolla) -> res = conj(persona)
+        iGastoTotalPersona(in l: lolla, in p: persona) -> res = nat
+        iPersonaQueMasGasto(in l: lolla, in personas: conj(persona)) -> res = persona
+        iVerStock(in l: lolla, in p: puesto, in i: item) -> res = nat
+        iMenorStock(in l: lolla, in i: item) -> res = puestoId 
 
 Implementacion Puesto:
 
     Interfaz:
 
-        crearPuesto(in precios: dicc(item, nat), in stock: dicc(item, nat), in desc: dicc(item, dicc(cant, nat))) --> res = puesto
+        CrearPuesto(in precios: dicc(item, nat), in stock: dicc(item, nat), in desc: dicc(item, dicc(cant, nat))) -> res: puesto
 
             pre:{claves(precios) = claves(stock) && claves(desc) C claves(precios)}
-            post:{}
+            post:{crearPuesto(precios, stock, desc) = res}
             Complejidad:
             Aliasing:
             Descripcion: Genera un nuevo puesto de comida.
 
-        vender(inout pdc: puesto, in p: persona, in i: item, in cant: cantidad)
+        Vender(inout pdc: puesto, in p: persona, in i: item, in cant: cantidad)
 
-            pre:{pdc =obs pdc0 && stock(pdc,i) >= cant}
-            post:{}
+            pre:{pdc = pdc0 && stock(pdc,i) >= cant}
+            post:{pdc = vender(pdc0,p,i,cant)}
             Complejidad: //El algoritmo tiene que tener en cuenta el precio de registrar una venta en el lolla
-            Aliasing:
+            Aliasing: Devuelve una referencia no modificable. 
             Descripcion: Registra una venta en el puesto.
 
-        verMenu(in pdc: puesto) --> res = conj(item)
+        verMenu(in pdc: puesto) -> res = conj(item)
 
             pre:{true}
-            post:{}
+            post:{res = menu(pdc)}
             Complejidad: O(1) //Va a estar guardado en la estructura
-            Aliasing:
+            Aliasing: Devuelve una copia del conjunto de items del menu.
             Descripcion: Retorna el menu del puesto.
 
-        verPrecio(in pdc: puesto, in i: item) --> res = nat
+        verPrecio(in pdc: puesto, in i: item) -> res:dinero
 
             pre:{i e claves(menu(pdc))}
-            post:{obtener(i, precio(pdc)) = res} //Va a estar guardado en la estructura vamos a necesitar los precios de todos los items
-            Complejidad: //Va a depender de la estructura con la que hagamos el menu
-            Aliasing:
+            post:{precio(pdc,i) = res}
+            Complejidad: O(log(I))
+            Aliasing: Devuelve una copia del precio del item.
             Descripcion: Retorna el precio del item en el puesto.
 
-        verStock(in pdc: puesto, in i: item) --> res = nat
+        verStock(in pdc: puesto, in i: item) -> res:nat
 
             pre:{i e claves(menu(pdc))}
             post:{obtener(i, stock(pdc)) = res}
             Complejidad: O(log(I))
-            Aliasing:
+            Aliasing: Devuelve una copia del stock del item.
             Descripcion: Retorna el stock del item en el puesto.
 
-        verDescuento(in pdc: puesto, in i: item, in cant: cantidad) --> res = nat
+        verDescuento(in pdc: puesto, in i: item, in cant: cantidad) -> res: dinero
 
             pre:{i e claves(menu(pdc))}
-            post:{res = obtener(item, obtener(cantidad, descuento(pdc)))} // No estoy muy seguro de esto... obtener(cantidad, descuento(pdc) de donde lo sacamos?
+            post:{res = descuento(pdc,i,cant)} 
             Complejidad: O(log(I) + log(cant))
-            Aliasing:
+            Aliasing: Devuelve una copia del descuento del item.
             Descripcion: Retorna el descuento del item en el puesto.
 
-        stockSuficiente(in pdc: puesto, in i: item, in cant: cantidad) --> res = bool
+        stockSuficiente(in pdc: puesto, in i: item, in cant: cantidad) -> res: bool
 
             pre:{i e claves(menu(pdc))}
             post:{res = stock(pdc, i) >= cant}
@@ -140,18 +157,41 @@ Implementacion Puesto:
             Aliasing:
             Descripcion: Retorna si hay stock suficiente del item en el puesto.
 
-        huboDescuento(in pdc: puesto, in p: persona, in i: item) --> res = bool
+        huboDescuento(in pdc: puesto, in p: persona, in i: item) -> res: bool
 
-            pre:{true} //Si el item no pertenece puedo devolver false, si la persona no hizo la compra tambien, 
-            post:{ res = } //Hubo descuento si compro la cantidad necesaria de ese item en ese puesto, sigo sin estar muy seguro de esto...
+            pre:{true}
+            post:{ res = def?() } //Hubo descuento si compro la cantidad necesaria de ese item en ese puesto, sigo sin estar muy seguro de esto...
             Complejidad:
             Aliasing:
             Descripcion: Retorna si hubo descuento o no durante la compra del item en el puesto.
 
-        gastosEnPuesto(in pdc: puesto, in p: persona) --> res = nat
+        gastosEnPuesto(in pdc: puesto, in p: persona) -> res: dinero
 
             pre:{}
             post:{}
             Complejidad: O(log(A))
             Aliasing:
             Descripcion: Retorna el gasto total de una persona en el puesto.
+    
+    Representacion:
+            
+            Puesto se representa con estr donde
+                estr = <
+                        menu: dicc(item, nat),
+                        precios: dicc(item, nat),
+                        stock: dicc(item, nat),
+                        descuentos: dicc(item, dicc(cant, nat)),
+                        ventas: dicc(persona, dicc(item, nat)),
+                        gastoTotal: dicc(persona, nat),
+                        >
+
+    Algoritmos:
+        iCrearPuesto(in precios: dicc(item, nat), in stock: dicc(item, nat), in desc: dicc(item, dicc(cant, nat))) -> res:puesto
+        iVender(inout pdc: puesto, in p: persona, in i: item, in cant: cantidad)
+        iVerMenu(in pdc: puesto) -> res:conj(item)
+        iVerPrecio(in pdc: puesto, in i: item) -> res:nat
+        iVerStock(in pdc: puesto, in i: item) -> res:nat
+        iVerDescuento(in pdc: puesto, in i: item, in cant: cantidad) -> res:nat
+        iStockSuficiente(in pdc: puesto, in i: item, in cant: cantidad) -> res:bool
+        iHuboDescuento(in pdc: puesto, in p: persona, in i: item) -> res:bool
+        iGastosEnPuesto(in pdc: puesto, in p: persona) -> res:nat

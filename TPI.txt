@@ -21,10 +21,10 @@ Implementacion Lolla:
 
         HackearLolla(inout l: lolla, in p: persona, in i: item)
 
-            pre:{l = l0 & p e personas(l) & item?????? & consumioSinPromoEnAlgunPuesto(l, p, i)}
+            pre:{l = l0 & p e personas(l) & consumioSinPromoEnAlgunPuesto(l, p, i)}
             post:{l = hackear(l0, p, i)}
             Complejidad: O(log(A) + log(I)) || O(log(A) + log(I) + log(P))
-            Aliasing:
+            Aliasing: 
             Descripcion: Dado un lolla, una persona valida y un item. Si la persona consumio ese item sin descuento, se le resta una unidad
             de ese item al consumo de la persona y se repone el stock del puesto en el cual se produjo la venta.
 
@@ -60,15 +60,6 @@ Implementacion Lolla:
             Aliasing: Devuelve una copia de la persona que mas gasto.
             Descripcion: Dado un lolla y un conjunto de personas, todas pertenecientes al lolla devuelve la que mas gasto.
 
-        //No se si es necesario
-        // verStock(in l: lolla, in p: puesto, in i: item) -> res = nat
-
-        //     pre:{p e puestos(l) && i e menu(p)}
-        //     post:{}
-        //     Complejidad:
-        //     Aliasing:
-        //     Descripcion: Dado un lolla, un puesto perteneciente y un item devuelve su stock en ese puesto.
-
         MenorStock(in l: lolla, in i: item) -> res: puestoId 
 
             pre:{ExistePuestoConStock(puestos(l), i)} //Habria que hacer este predicado auxiliar.
@@ -82,23 +73,23 @@ Implementacion Lolla:
         Lolla se representa con estr donde 
             estr = <
                     puestos: diccLog(puestoId, puesto),
-                    personas: conjLog(persona), //Convendra tenerlas en un heap? para poder sacar el maximo facilmente?
+                    personas: conjLog(persona),
                     gastosPersonas: diccLog(persona, nat),
-                    // personasPorDinero: diccHeap(persona,dinero)
+                    // comprasSinDescuentoPorPersona: diccLog(persona, diccLog(item, secu(puestoId))),
                     personaQueMasGasto: persona
-                    > //No convendria tener solo una variable del estilo PersonaQueMasGasto?
+                   >
     Algoritmos:
         iIniciarLolla(in puestos: dicc(puestoid, puesto), in personas: conj(persona)) -> res: Lolla { //O(A) + O(P)
 
             estr.puestos = puestos; //O(P) donde P es la cantidad de claves de puestos(ids).
             estr.personas = personas; //O(A) donde A es la cardinalidad del conjunto(personas).
             estr.gastosPersonas = Vacio();
-            estr.personaQueMasGasto = vacio; //O(1)
+            estr.personaQueMasGasto = 0; //O(1) 0 es un placeholder hasta que haya al menos 1 compra en todo el lolla.
         }
 
-        iVender(inout l: lolla, in pid: puestoId, in p: persona, in i: item, in cant: cantidad) { //O(log(P)) + O(log(I)) + O(log(Cant)) + O(log(A))
+        iVender(inout l: lolla, in pid: puestoId, in p: persona, in i: item, in cant: cantidad) { //O(log(A) + log(I) + log(P) + log(Cant)) donde A es la cantidad de personas, I la cantidad de items, P la cantidad de puestos y Cant es la máxima cantidad adquirida.
             
-            puesto = significado(estr.puestos, puestoId); //O(log (P)) Donde P es la cantidad de puestos.
+            puesto = significado(estr.puestos, puestoId); //O(log(P)) Donde P es la cantidad de puestos.
 
             Vender(puesto, p, i, cant); //O(log(I) + log(Cant) + log(A)) donde A es la cantidad de Personas, I es la cantidad de items y Cant es la cantidad Máxima.
 
@@ -123,7 +114,10 @@ Implementacion Lolla:
             }
         }
 
-        iHackearLolla(inout l: lolla, in p: persona, in i: item)
+        iHackearLolla(inout l: lolla, in p: persona, in i: item) {
+           
+
+        }
 
         iVerPuestos(in l: lolla) -> res = dicc(puestoId, puesto) { //O(1)
 
@@ -231,29 +225,13 @@ Implementacion Puesto:
             Aliasing: Devuelve una copia del stock del item.
             Descripcion: Retorna el stock del item en el puesto.
 
-        verDescuento(in pdc: puesto, in i: item, in cant: cantidad) -> res: dinero
+        verDescuento(in pdc: puesto, in i: item, in cant: cantidad) -> res: nat
 
             pre:{i e menu(pdc)}
             post:{res = descuento(pdc,i,cant)} 
             Complejidad: O(log(I) + log(cant)) donde I es la cantidad de items y cant son las cantidades en descuentos.
             Aliasing: Devuelve una copia del descuento del item.
             Descripcion: Retorna el descuento del item en el puesto.
-
-        // stockSuficiente(in pdc: puesto, in i: item, in cant: cantidad) -> res: bool   Creo que está de más.
-
-        //     pre:{i e menu(pdc)}
-        //     post:{res = (stock(pdc, i) >= cant)}
-        //     Complejidad:
-        //     Aliasing: -
-        //     Descripcion: Retorna si hay stock suficiente del item en el puesto.
-
-        huboDescuento(in pdc: puesto, in p: persona, in i: item) -> res: bool
-
-            pre:{i e menu(pdc)} //Tiene sentido que pidamos que el item pertenezca al puesto en cuestion?
-            post:{ res = def?() } //Hubo descuento si compro la cantidad necesaria de ese item en ese puesto, sigo sin estar muy seguro de esto...
-            Complejidad:
-            Aliasing: -
-            Descripcion: Retorna si hubo descuento o no durante la compra del item en el puesto.
 
         gastosEnPuesto(in pdc: puesto, in p: persona) -> res: dinero
 
@@ -275,29 +253,55 @@ Implementacion Puesto:
             
             Puesto se representa con estr donde
                 estr = <
-                        // menu: dicc(item, nat), Menu no tiene mucho sentido, toda la info se puede obtener facilmente accediendo al resto de la estructura.
                         precios: dicclog(item, nat),
                         stock: dicclog(item, nat),
-                        descuentos: dicclog(item, dicc(cant, nat)),
-                        //ventas: dicc(persona, dicc(item, nat)), Ojo aca, No va dicc(item,nat). Que pasa si una persona compra hace 2 veces la misma compra? Solo quedaria registrada la ultima. Deberia ser un multiconjunto, secuencia, etc. Voy a usar lista enlazada.
-                        ventas: dicclog(persona, listaEnlazada(tupla(item, nat)))
+                        descuentos: dicclog(item, dicc(cantidad, nat)),
+                        rangosDescuentosxItem: diccLog(item, vector(cantidad)), 
+                        ventas: dicclog(persona, listaEnlazada(tupla(item, cantidad))), //Considerar dicLog(item, nat).
+                        //VentasSinPromo: diccLog(persona, dicLog())
                         gastoTotal: dicclog(persona, nat)
                         >
 
     Algoritmos:
 
-        iCrearPuesto(in precios: dicc(item, nat), in stock: dicc(item, nat), in desc: dicc(item, dicc(cant, nat))) -> res:puesto { //O(I). Donde I es la cant de claves de precios/Stock
+        iCrearPuesto(in precios: dicc(item, nat), in stock: dicc(item, nat), in desc: dicc(item, dicc(cant, nat))) -> res:puesto { //O(log(I)) * D * J * E. Donde I es la cant de claves de precios/Stock, D es la cantidad de descuentos y E es la longitud del vector rangos.
 
                 estr.precios = precios; //O(I)
                 estr.stock = stock; //O(I)
                 estr.descuentos = desc; //O(m) //m son las claves de desc (#menor o igual a las de precios/stock), en el peor caso es igual a O(I) cuando todos los elementos tienen descuentos.
+                estr.rangosDescuentosxItem = Vacio(); //O(1)
                 estr.ventas = Vacio(); //O(1)
                 estr.gastoTotal = Vacio(); //O(1)
+
+                itDescuentos = crearIt(estr.descuentos); //O(1)
+            
+                while(HaySiguiente(itDescuentos)){ //O(log(I) * D * J * E) donde D es la cantidad de descuentos y E es la longitud del vector rangos.
+                    
+                    item =  SiguienteClave(itDescuentos); //O(1)
+                    definir(estr.rangosDescuentosxItem, item, Vacia()); //O(log(I))
+                    itCantDescuentos = crearIt(significado(estr.descuentos, item)); //O(log(I))
+                    vectorRangosCantidad = significado(estr.rangosCantidad, item); //O(log(I))
+                    j = 0; //O(1)
+
+                    while(HaySiguiente(itCantDescuentos)){ //O(D * J * E)
+
+                        cantidad = SiguienteClave(itCantDescuentos); //O(1) Asumo que las cantidades van de menor a mayor(es decir si tengo descuentos por 5, 10 y 3 cantidades al iterar recorreria 3, luego 5 y por último 10).
+
+                        for(j, j <= cantidad, j++){ //O(J * E)
+ 
+                            AgregarAtras(vectorRangosCantidad, cantidad); //O(E)
+                        }
+
+                        Avanzar(itCantDescuentos); //O(1)
+                    }
+
+                    Avanzar(itDescuentos); //O(1)
+                }
             }
 
-        iVender(inout pdc: puesto, in p: persona, in i: item, in cant: cantidad) {//O(log(I) + log(cant) + log(A))
+        iVender(inout pdc: puesto, in p: persona, in i: item, in cant: cantidad) {//O(log(I) + log(Cant) + log(A))
 
-                nuevoGasto = CalcularGasto(pdc, i, cant); //O(log(I) + log(cant))
+                nuevoGasto = CalcularGasto(pdc, i, cant); //O(log(I) + log(Cant)) donde I es la cantidad de items y Cant es la cantidad de promociones.
                 
                 if(definido?(estr.ventas, p)){ //O(log(A))
 
@@ -341,14 +345,32 @@ Implementacion Puesto:
             
             return stockItem; //O(1)
         }
-        iVerDescuento(in pdc: puesto, in i: item, in cant: cantidad) -> res:nat {
 
+        iVerDescuento(in pdc: puesto, in i: item, in cant: cantidad) -> res:nat { //O(log(I) + log(Cant)) donde I es la cantidad de elementos y Cant es la cantidad máxima.
 
+        
+           if(!definido?(estr.descuentos, i)) { //O(log(I))
+
+                return 0;
+            }
+
+            descuentos = significado(estr.descuentos, i); //O(log(I))
+            rangoDescuentos = significado(estr.rangosDescuentosxItem, i); //O(log(I)) en el peor caso tengo tantos descuentos como variedades de items tenga.
+
+           if(Primero(rangoDescuentos) <= cant <= Ultimo(rangoDescuentos)){ //O(log(Cant))
+
+                claveCantidad = rangoDescuentos[cant]; //O(1)
+                return Significado(descuentos, claveCantidad); //O(log(Cant))
+           }
+
+           else if(cant > Ultimo(rangoDescuentos)){ //O(log(Cant))
+
+                claveCantidad = Ultimo(rangoDescuentos) //O(1)
+                return Significado(descuentos, claveCantidad); //O(log(Cant))
+           }
+
+           return 0; //O(1)
         }
-
-        // iStockSuficiente(in pdc: puesto, in i: item, in cant: cantidad) -> res:bool. Está de más.
-
-        iHuboDescuento(in pdc: puesto, in p: persona, in i: item) -> res:bool
 
         iGastosEnPuesto(in pdc: puesto, in p: persona) -> res:nat { //O(log(A))
 
@@ -364,27 +386,13 @@ Implementacion Puesto:
 
         iCalcularGasto(in pdc: puesto, in i: item, in cant: cantidad) -> res:nat { //O(log(I) + log(Cant))
 
-            total = significado(estr.precios, i) * cant; //O(log(I)) donde I es la cantidad de claves de precios.
-            descuentosItem = significado(i, estr.descuentos); //O(log(I))
+            total = significado(estr.precios, i) * cant; //O(log(I) + log(Cant)) donde I es la cantidad de claves de precios y Cant es la cantidad de descuentos.
+            descuento = verDescuento(pdc, i, cant); //O(log(I) + log(Cant))
 
+            if(descuento != 0){ //O(1)
 
-            // it = CrearIt(significado(i, estr.descuentos)); //O(log(I)) donde I es la cantidad de claves de descuentos (en el peor caso todos los items tienen descuentos por lo tanto es igual a la de precios).
-
-            // while(HaySiguiente(it)){ //O(Cant) donde Cant es la cantidad de descuentos.
- 
-            //     if(desc < SiguienteSignificado(it) && cant >= SiguienteClave(it)){ //O(1)
-
-            //         descuento = SiguienteSignificado(it); //O(1)
-            //     }
-
-            //     Avanzar(it); //O(1)
-            // }
-
-            if(definido?(descuentosItem, cant)){ //O(log(Cant))
-
-                descuento = significado(descuentosItem, cant); //O(log(Cant))
-                total = total * descuento; //O(1)
+                return total * descuento; //O(1)
             }
-    
+
             return total; //O(1)
         }

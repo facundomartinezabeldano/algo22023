@@ -7,7 +7,6 @@ Implementacion Lolla:
             pre:{!vacio?(personas) & !vacio?(claves(puestos)) & vendenAlMismoPrecio(significados(puestos)) & noVendieronAun(significados(puestos))}
             post:{crearLolla(puestos, personas) = res}
             Complejidad:
-            Aliasing:
             Descripcion: Dados un conjunto de personas y puestos crea un Lolla. 
 
         Vender(inout l: lolla, in pid: puestoId, in p: persona, in i: item, in cant: cantidad)
@@ -16,7 +15,6 @@ Implementacion Lolla:
                 & item e menu(obtener(pid, puestos(l))) & haySuficiente?(obtener(pid, puestos(l)), i, cant)}
             post:{l = vender(l0, pid, p, i, cant)}
             Complejidad: O(log(A) + log(I) + log(P) + log(cant))
-            Aliasing:
             Descripcion: Dados un lolla, un id de un puesto, una persona, un item y una cantidad...
 
         HackearLolla(inout l: lolla, in p: persona, in i: item)
@@ -24,7 +22,6 @@ Implementacion Lolla:
             pre:{l = l0 & p e personas(l) & consumioSinPromoEnAlgunPuesto(l, p, i)}
             post:{l = hackear(l0, p, i)}
             Complejidad: O(log(A) + log(I)) || O(log(A) + log(I) + log(P))
-            Aliasing: 
             Descripcion: Dado un lolla, una persona valida y un item. Si la persona consumio ese item sin descuento, se le resta una unidad
             de ese item al consumo de la persona y se repone el stock del puesto en el cual se produjo la venta.
 
@@ -33,7 +30,7 @@ Implementacion Lolla:
             pre:{true}
             post:{res = puestos(l)}
             Complejidad: O(1)
-            Aliasing:
+            Aliasing: Devuelve una referencia no modificable al conjunto de puestos del lolla.
             Descripcion: Dado un lolla, retorna un diccionario con sus puestos.
 
         VerPersonas(in l: lolla) -> res:conj(persona)
@@ -62,10 +59,10 @@ Implementacion Lolla:
 
         MenorStock(in l: lolla, in i: item) -> res: puestoId 
 
-            pre:{ExistePuestoConStock(puestos(l), i)} //Habria que hacer este predicado auxiliar.
+            pre:{true}
             post:{res = menorStock(l, i)}
             Complejidad: //No hay restriccion
-            Aliasing:
+            Aliasing: devuelve una copia del id del puesto con menor stock.
             Descripcion: Dado un lolla y un item retorna el puesto que tiene menor stock de ese item.
 
     Representacion:
@@ -75,15 +72,17 @@ Implementacion Lolla:
                     puestos: diccLog(puestoId, puesto),
                     personas: conjLog(persona),
                     gastosPersonas: diccLog(persona, nat),
-                    // comprasSinDescuentoPorPersona: diccLog(persona, diccLog(item, secu(puestoId))),
+                    comprasSinDescuentoPorPersona: diccLog(persona, diccLog(item, dicLog(puestoId, puesto))),
                     personaQueMasGasto: persona
                    >
     Algoritmos:
+
         iIniciarLolla(in puestos: dicc(puestoid, puesto), in personas: conj(persona)) -> res: Lolla { //O(A) + O(P)
 
             estr.puestos = puestos; //O(P) donde P es la cantidad de claves de puestos(ids).
             estr.personas = personas; //O(A) donde A es la cardinalidad del conjunto(personas).
-            estr.gastosPersonas = Vacio();
+            estr.gastosPersonas = Vacio(); //O(1)
+            estr.comprasSinDescuentoxPersona = Vacio(); //O(1)
             estr.personaQueMasGasto = 0; //O(1) 0 es un placeholder hasta que haya al menos 1 compra en todo el lolla.
         }
 
@@ -112,11 +111,87 @@ Implementacion Lolla:
                     estr.personaQueMasGasto = p; //O(1)
                 }
             }
+
+            //Si no hay descuento agrego al puesto a la lista ventas sin promocion que hizo la persona p.
+            if(verDescuento(puesto, i, cant) == 0){ //O(log(A) + log(I) + log(P))
+
+                if(!Definido?(estr.comprasSinDescuentoPorPersona, p)){ //O(log(A) + log(I) + log(P))
+
+                    Definir(estr.comprasSinDescuentoPorPersona, p, Vacio()); //O(log(A))
+                    Definir(Significado(estr.comprasSinDescuentoPorPersona, p), i, Vacio()) //O(log(A) + log(I))
+                    Definir(Significado(Significado(estr.comprasSinDescuentoPorPersona, p), i), puestoId, puesto); //O(log(A) + log(I) + log(P))
+                }
+
+                else{ //O(log(A) + log(I) + log(P))
+                    
+                    //Chequeo si la persona esta definida en comprasSinDescuentoPorPersona, si no está la defino.
+                    if(!Definido?((Significado(estr.comprasSinDescuentoPorPersona, p)), i)){ //O(log(A) + log(I) + log(P))
+
+                        Definir(Significado(estr.comprasSinDescuentoPorPersona, p), i, Vacio()) //O(log(A) + log(I))
+                        Definir(Significado(Significado(estr.comprasSinDescuentoPorPersona, p), i), puestoId, puesto); //O(log(A) + log(I) + log(P))
+                    }
+
+                    //Si está, chequeo lo mismo para el item y el puesto. Si no están los defino.
+                    else{ //O(log(A) + log(I) + log(P))
+                        
+                        diccionarioPuestos = Significado(Significado(estr.comprasSinDescuentoPorPersona, p), i); //O(log(A) + log(I))
+                        if(!Definido?(diccionarioPuestos, puestoId)){
+
+                            Definir(diccionarioPuestos, puestoId, puesto); //O(log(P))
+                        }
+                    }
+                }
+            }
         }
 
-        iHackearLolla(inout l: lolla, in p: persona, in i: item) {
-           
+        iHackearLolla(inout l: lolla, in p: persona, in i: item) { //O(log(A) + log(I)) || O(log(A) + log(I) + log(P))
+            //Busco el puesto en comprasSinDescuentoxPersona.
+            puestosConDescuentos = significado(significado(estr.comprasSinDescuentoPorPersona, p), i) //O(log(A) + log(I))
 
+            itPuesto = crearIt(puestosConDescuentos); //O(1)
+            puestoBuscado = SiguienteSignificado(itPuesto); //O(1)
+            idPuestoBuscado = SiguienteClave(itPuesto); //O(1)
+            
+            //resto la cantidad de dinero que cuesta el item a la persona en gastosPersona
+            precioItem = verPrecio(puestoBuscado, i); //O(log(I))
+            definir(estr.gastosPersonas, p, significado(estr.gastosPersonas, p) - precioItem); //O(log(A))
+            //Actualizo personaQueMasGasto
+            if(significado(estr.gastosPersona, p) > significado(estr.gastosPersona, estr.personaQueMasGasto)){ //O(log(A))
+
+                estr.personaQueMasGasto = p; //O(1)
+            }
+
+            else if(significado(estr.gastosPersona, p) = significado(estr.gastosPersona, estr.personaQueMasGasto)){ //O(log(A))
+
+                if(p < estr.personaQueMasGasto){ //O(1)
+
+                    estr.personaQueMasGasto = p; //O(1)
+                }
+            }
+            //resto la cantidad gastada en el puesto dentro de puesto
+            definir(puestoBuscado.gastoTotal, p, significado(puestoBuscado.gastoTotal, p) - precioItem); //O(log(A))
+
+            //Repongo el stock del puesto en 1.
+            definir(puestoBuscado.stock, i, verStock(puestoBuscado, i) +1); //O(log(I))
+
+            //Elimino la compra del puesto
+                //Si la cantidad en la compra es 1 lo elimino de la lista enlazada. 
+                //Elimino el puesto de comprasSinDescuentoxPersona
+
+            ventasItemSinPromo = Primero(Significado(Significado(puestoBuscado.ventasSinPromo, p), i)); //O(log(A) + log(I))
+
+            if(Primero(ventasItemSinPromo) == 1){ //O(log(A) + log(I) + log(P))
+                    
+                Fin(ventasItemSinPromo) //O(1)
+                Definir(Significado(puestoBuscado.ventasSinPromo, p), i, ventasItemSinPromo); //O(log(A) + log(I))
+                Borrar(puestosConDescuentos, idPuestoBuscado); //O(log(P))  Este es el caso Permitido para la complejidad de O(log(A) + log(I) + log(P)) donde ya no hay hackeos disponibles para esa persona e item en ese puesto.
+            }
+
+            //Si la cantidad es mas de 1 solo resto 1 unidad
+            else{
+
+                Primero(ventasItemSinPromo)--; //O(1)
+            }       
         }
 
         iVerPuestos(in l: lolla) -> res = dicc(puestoId, puesto) { //O(1)
@@ -154,23 +229,29 @@ Implementacion Lolla:
         
         // iVerStock(in l: lolla, in p: puesto, in i: item) -> res = nat Esta funcion me parece innecesaria.
 
-        iMenorStock(in l: lolla, in i: item) -> res = puestoId { //O(P) * O(log(I))
+        iMenorStock(in l: lolla, in i: item) -> res = puestoId { //O(P * log(I))
 
             it = crearIt(estr.puestos); //O(1)
             menorStock = <SiguienteClave(it), SiguienteSignificado(it)>; //O(1)
 
-            while(HaySiguiente(it)){ // O(P) O(log(I)) donde P es la cantidad de puestos.
+            while(HaySiguiente(it)){ // O(P * log(I)) donde P es la cantidad de puestos.
+                
+                idPuestoActual = SiguienteClave(it);
+                puestoActual = SiguienteSignificado(it);
 
-                if(verStock(SiguienteSignificado(it), i) <= pi1(menorStock)){ //O(log(I)) donde I es la cantidad de items.
+                if(Definido?(puestoActual.stock, i), i){ //O(log(I)
+                    
+                    if(verStock(puestoActual, i) <= pi1(menorStock)){ //O(log(I)) donde I es la cantidad de items.
 
-                    if(SiguienteClave(it) < pi0(menorStock)){ //O(1)
+                        if(idPuestoActual < pi0(menorStock)){ //O(1)
 
-                        menorStock = <SiguienteClave(it), SiguienteSignificado(it)> //O(1)
-                    }
+                            menorStock = <idPuestoActual, puestoActual> //O(1)
+                        }
 
-                    else{ //O(1)
+                        else{ //O(1)
 
-                        menorStock = <SiguienteClave(it), SiguienteSignificado(it)> //O(1)
+                            menorStock = <idPuestoActual, puestoActual> //O(1)
+                        }
                     }
                 }
 
@@ -190,7 +271,6 @@ Implementacion Puesto:
             pre:{claves(precios) = claves(stock) && claves(desc) C claves(precios)}
             post:{crearPuesto(precios, stock, desc) = res}
             Complejidad:
-            Aliasing: -
             Descripcion: Genera un nuevo puesto de comida.
 
         Vender(inout pdc: puesto, in p: persona, in i: item, in cant: cantidad)
@@ -198,7 +278,6 @@ Implementacion Puesto:
             pre:{pdc = pdc0 && i e menu(pdc) &&L stock(pdc,i) >= cant} //Aca tenes que pedir si o si que el item este en el menu sino se indefine stock(pdc,i).
             post:{pdc = vender(pdc0,p,i,cant)}
             Complejidad: O(log(I) + log(cant) + log(P)) donde I es la cantidad de items, cant son las cantidades en descuentos y P la cantidad de Personas. //El algoritmo tiene que tener en cuenta el precio de registrar una venta en el lolla
-            Aliasing: Devuelve una referencia no modificable. //Para mi no hay aliasing acá y no se devuelve ninguna referencia.
             Descripcion: Registra una venta en el puesto.
 
         verMenu(in pdc: puesto) -> res = conj(item)
@@ -206,7 +285,7 @@ Implementacion Puesto:
             pre:{true}
             post:{res = menu(pdc)}
             Complejidad: O(I) Donde I es la cantidad de Items en el menu //O(1)?? Porque queremos que este en O(1)??
-            Aliasing: Devuelve una copia del conjunto de items del menu.
+            Aliasing: Devuelve una referencia no modificable del conjunto de items del menu.
             Descripcion: Retorna el menu del puesto.
 
         verPrecio(in pdc: puesto, in i: item) -> res:dinero
@@ -238,7 +317,7 @@ Implementacion Puesto:
             pre:{true}
             post:{res = gastosDe(pdc, p)}
             Complejidad: O(log(A))
-            Aliasing:
+            Aliasing: devuelve una copia del dinero total gastado en un puesto.
             Descripcion: Retorna el gasto total de una persona en el puesto.
 
         calcularGasto(in pdc: puesto, in i:item, in cant: cantidad) -> res: dinero
@@ -246,7 +325,7 @@ Implementacion Puesto:
             pre:{true}
             post:{res = gastosDe1Venta(pdc, (i, cant))}
             Complejidad: O(log(I) + log(cant)) donde I es la cantidad de items y cant son las cantidades en descuentos.
-            Aliasing: -
+            Aliasing: devuelve una copia del dinero gastado.
             Descripcion: Devuelve el precio de una venta.
     
     Representacion:
@@ -257,14 +336,14 @@ Implementacion Puesto:
                         stock: dicclog(item, nat),
                         descuentos: dicclog(item, dicc(cantidad, nat)),
                         rangosDescuentosxItem: diccLog(item, vector(cantidad)), 
-                        ventas: dicclog(persona, listaEnlazada(tupla(item, cantidad))), //Considerar dicLog(item, nat).
-                        //VentasSinPromo: diccLog(persona, dicLog())
+                        ventasConPromo: dicclog(persona, listaEnlazada(tupla(item, cantidad))),
+                        ventasSinPromo: diccLog(persona, dicLog(i, listaEnlazada(cantidad))),
                         gastoTotal: dicclog(persona, nat)
                         >
 
     Algoritmos:
 
-        iCrearPuesto(in precios: dicc(item, nat), in stock: dicc(item, nat), in desc: dicc(item, dicc(cant, nat))) -> res:puesto { //O(log(I)) * D * J * E. Donde I es la cant de claves de precios/Stock, D es la cantidad de descuentos y E es la longitud del vector rangos.
+        iCrearPuesto(in precios: dicc(item, nat), in stock: dicc(item, nat), in desc: dicc(item, dicc(cant, nat))) -> res:puesto { //O(log(I)) * D * J * E. Donde I es la cant de claves de precios/Stock, D es la cantidad de descuentos y E es la longitud del vector rangos. J es la cantidad de enteros que hay entre 2 cantidades en promoción. Por ejemplo si tengo dos promos de empanadas, una llevando 3 empanadas y la otra llevando 100, J sería 97.
 
                 estr.precios = precios; //O(I)
                 estr.stock = stock; //O(I)
@@ -299,21 +378,51 @@ Implementacion Puesto:
                 }
             }
 
-        iVender(inout pdc: puesto, in p: persona, in i: item, in cant: cantidad) {//O(log(I) + log(Cant) + log(A))
+       iVender(inout pdc: puesto, in p: persona, in i: item, in cant: cantidad) {//O(log(I) + log(Cant) + log(A))
 
                 nuevoGasto = CalcularGasto(pdc, i, cant); //O(log(I) + log(Cant)) donde I es la cantidad de items y Cant es la cantidad de promociones.
                 
-                if(definido?(estr.ventas, p)){ //O(log(A))
+                if(verDescuento(pdc, i, cant) != 0){ //O(log(I) + log(Cant) + log(A))
 
-                    AgregarAdelante(significado(estr.ventas, p), (i, cant)); //O(log(A)) donde A es cantidad de claves de ventas.
-                    definir(estr.gastoTotal, p, significado(p, estr.gastoTotal) + nuevoGasto); //O(log(m)) donde m es cantidad de claves de gastoTotal. Pero como la cantidad de claves es la misma que la de ventas queda O(log(A)). Son iguales dado que si se hace una venta hay un gasto asociado.
+                    if(definido?(estr.ventasConPromo, p)){ //O(log(A))
+
+                        AgregarAdelante(significado(estr.ventasConPromo, p), (i, cant)); //O(log(A)) donde A es cantidad de claves de ventas.
+                        definir(estr.gastoTotal, p, significado(p, estr.gastoTotal) + nuevoGasto); //O(log(m)) donde m es cantidad de claves de gastoTotal. Pero como la cantidad de claves es la misma que la de ventas queda O(log(A)). Son iguales dado que si se hace una venta hay un gasto asociado.
+                    }
+
+                    else{
+
+                        definir(estr.ventas, p, Vacio()); //O(log(A)) donde A es cantidad de claves de ventas.
+                        AgregarAdelante(significado(estr.ventas, p), (i, cant)); //O(log(A))
+                        definir(estr.gastoTotal, p, nuevoGasto); //O(log(m)) donde m es cantidad de claves de gastoTotal. Pero como la cantidad de claves es la misma que la de ventas queda O(log(A)).
+                    }
                 }
 
-                else{
+                else { //O(log(A) + log(I))
 
-                    definir(estr.ventas, p, Vacio()); //O(log(A)) donde A es cantidad de claves de ventas.
-                    AgregarAdelante(significado(estr.ventas, p), (i, cant)); //O(log(A))
-                    definir(estr.gastoTotal, p, nuevoGasto); //O(log(m)) donde m es cantidad de claves de gastoTotal. Pero como la cantidad de claves es la misma que la de ventas queda O(log(A)).
+                    if(definido?(estr.ventasSinPromo, p)){ //O(log(A) + log(I))
+                        
+                        if(definido?((significado(estr.ventasSinPromo, p)), i)){ //O(log(A) + log(I))
+
+                            listaVentas = significado(significado(estr.ventasSinPromo, p), i); //O(log(A) + log(I)) siendo el peor caso que I sean todos los items vendidos por el puesto a la persona p.
+                            AgregarAdelante(listaVentas, cantidad); //O(1)
+                        }
+
+                        else{ //O(log(A) + log(I))
+
+                            definir(significado(estr.ventasSinPromo, p), i, Vacia()); //O(log(A))
+                            listaVentas = significado(significado(estr.ventasSinPromo, p), i); //O(log(A) + log(I))
+                            AgregarAdelante(listaVentas, cantidad); //O(1)
+                        }
+                    }
+
+                    else{ //O(log(A) + log(I))
+
+                        definir(estr.ventasSinPromo, p, Vacio()) //O(log(A))
+                        definir(significado(estr.ventasSinPromo, p), i, Vacia()); //O(log(A))
+                        listaVentas = significado(significado(estr.ventasSinPromo, p), i); //O(log(A) + log(I))
+                        AgregarAdelante(listaVentas, cantidad); //O(1)
+                    }
                 }
 
                 definir(estr.stock, i, significado(estr.stock, i) - cant); //O(log(I)) donde I es cantidad de claves de stock.

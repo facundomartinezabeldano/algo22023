@@ -2,7 +2,10 @@ Implementacion Lolla:
 
     Interfaz: 
 
-        IniciarLolla(in puestos: dicc(puestoid, puesto), in personas: conj(persona)) -> res:Lolla
+        Se explica con: Lollapatuza
+        generos: lolla
+
+        IniciarLolla(in puestos: dicc(puestoid, puesto), in personas: conj(persona)) -> res: lolla
 
             pre:{!vacio?(personas) & !vacio?(claves(puestos)) & vendenAlMismoPrecio(significados(puestos)) & noVendieronAun(significados(puestos))}
             post:{crearLolla(puestos, personas) = res}
@@ -15,7 +18,7 @@ Implementacion Lolla:
                 & item e menu(obtener(pid, puestos(l))) & haySuficiente?(obtener(pid, puestos(l)), i, cant)}
             post:{l = vender(l0, pid, p, i, cant)}
             Complejidad: O(log(A) + log(I) + log(P) + log(cant))
-            Descripcion: Dados un lolla, un id de un puesto, una persona, un item y una cantidad...
+            Descripcion: Dados un lolla, un id de un puesto, una persona, un item y una cantidad, registra una venta en el puesto, a nombre de la persona con la cantidad indicada del item en cuestión.
 
         HackearLolla(inout l: lolla, in p: persona, in i: item)
 
@@ -23,7 +26,7 @@ Implementacion Lolla:
             post:{l = hackear(l0, p, i)}
             Complejidad: O(log(A) + log(I)) || O(log(A) + log(I) + log(P))
             Descripcion: Dado un lolla, una persona valida y un item. Si la persona consumio ese item sin descuento, se le resta una unidad
-            de ese item al consumo de la persona y se repone el stock del puesto en el cual se produjo la venta.
+            del item al consumo de la persona y se repone una unidad del stock, del puesto en el cual se hizo la venta.
 
         VerPuestos(in l: lolla) -> res = dicc(puestoId, puesto)
 
@@ -55,7 +58,7 @@ Implementacion Lolla:
             post:{res = masGasto(l)}
             Complejidad: O(1)
             Aliasing: Devuelve una copia de la persona que mas gasto.
-            Descripcion: Dado un lolla y un conjunto de personas, todas pertenecientes al lolla devuelve la que mas gasto.
+            Descripcion: Dado un lolla y un conjunto de personas pertenecientes al lolla devuelve aquella que mas dinero gastó.
 
         MenorStock(in l: lolla, in i: item) -> res: puestoId 
 
@@ -63,7 +66,7 @@ Implementacion Lolla:
             post:{res = menorStock(l, i)}
             Complejidad: //No hay restriccion
             Aliasing: devuelve una copia del id del puesto con menor stock.
-            Descripcion: Dado un lolla y un item retorna el puesto que tiene menor stock de ese item.
+            Descripcion: Dado un lolla y un item retorna el puesto con menor stock del item indicado.
 
     Representacion:
 
@@ -75,6 +78,7 @@ Implementacion Lolla:
                     comprasSinDescuentoPorPersona: diccLog(persona, diccLog(item, dicLog(puestoId, puesto))),
                     personaQueMasGasto: persona
                    >
+                   
     Algoritmos:
 
         iIniciarLolla(in puestos: dicc(puestoid, puesto), in personas: conj(persona)) -> res: Lolla { //O(A) + O(P)
@@ -163,7 +167,7 @@ Implementacion Lolla:
 
             else if(significado(estr.gastosPersona, p) = significado(estr.gastosPersona, estr.personaQueMasGasto)){ //O(log(A))
 
-                if(p < estr.personaQueMasGasto){ //O(1)
+                if(p > estr.personaQueMasGasto){ //O(1)
 
                     estr.personaQueMasGasto = p; //O(1)
                 }
@@ -263,6 +267,9 @@ Implementacion Lolla:
 
 
 Implementacion Puesto:
+
+    Se explica con: Puesto
+    generos: puesto
 
     Interfaz:
 
@@ -505,3 +512,99 @@ Implementacion Puesto:
 
             return total; //O(1)
         }
+
+Servicios usados: diccLog, vector, conjLineal, listaEnlazada.
+
+Rep y abs de Lolla:
+
+    Lolla se representa con estr donde 
+            estr = <
+                    puestos: diccLog(puestoId, puesto),
+                    personas: conjLineal(persona),
+                    gastosPersonas: diccLog(persona, nat),
+                    comprasSinDescuentoPorPersona: diccLog(persona, diccLog(item, dicLog(puestoId, puesto))),
+                    personaQueMasGasto: persona
+                   >
+
+    Rep(e) = //Todos los puestos de ComprasSinDescuentoPorPersona pertenecen a puestos.
+                 (paratodo p: persona)(def?(p, e.comprasSinDescuentoPorPersona) =>L (paratodo i: item)(def?(i, obtener(p, e.comprasSinDescuentoPorPersona)) =>L (paratodo pid: puestoId)(def?(pid, obtener(i, obtener(p, e.comprasSinDescuentoPorPersona))) =>L pid pertenece claves(e.puestos) &L obtener(pid, e.puestos) = obtener(pid, obtener(i, obtener(p, e.comprasSinDescuentoPorPersona))))))
+             //Todos los item de ComprasSinDescuentoPorPersona pertenecen a algun puesto de puestos
+                (paratodo p: persona)(def?(p, e.comprasSinDescuentoPorPersona) =>L (paratodo i: item)(def?(i, obtener(p, e.comprasSinDescuentoPorPersona) =>L (existe pid: puesto)(def?(pid, e.puestos) =>L i pertenece menu(obtener(pid, e.puestos)) & obtener(pid, e.puestos) = obtener(pid, obtener(i, obtener(p, e.comprasSinDescuentoPorPersona)))))))
+             //Todas las personas de ComprasSinDescuentoPorPersona pertenecen a personas.
+                (paratodo p: persona)(def?(p, e.comprasSinDescuentoPorPersona) => p pertenece e.personas )
+             //personaQueMasGasto pertenece a persona y a gastosPersona y ademas es la que mas gasto de gastosPersona (en caso de empate es la de mayor Id)
+                def?(e.personaQueMasGasto, e.gastosPersonas) &L (paratoda p: persona)(def?(p, e.gastosPersonas) =>L (obtener(p, e.gastosPersonas) < obtener(e.personaQueMasGasto, e.gastosPersona)) v (obtener(p, e.gastosPersonas) = obtener(e.personaQueMasGasto, e.gastosPersona) & e.personaQueMasGasto > p))
+             //todas las personas de gastosPersonas pertenecen a personas.
+                (paratodo p: persona)(def?(p, e.comprasSinDescuentoPorPersona) => p pertenece e.personas)
+
+
+    Abs(e) =  lolla es l : personas(l) = e.personas && puestos(l) = e.puestos
+
+
+Rep y abs de Puesto de Comida: 
+
+    Puesto se representa con estr donde
+                estr = <
+                        precios: dicclog(item, nat),
+                        stock: dicclog(item, nat),
+                        descuentos: dicclog(item, dicc(cantidad, nat)),
+                        rangosDescuentosxItem: diccLog(item, vector(cantidad)), 
+                        ventasConPromo: dicclog(persona, listaEnlazada(tupla(item, cantidad))),
+                        ventasSinPromo: diccLog(persona, dicLog(item, listaEnlazada(cantidad))),
+                        gastoTotal: dicclog(persona, nat)
+                        >
+    
+    Rep(e) = // claves(precios) = claves(stock) && claves(descuentos) = claves(precios)
+                claves(e.precios) = claves(e.stock) & claves(e.stock) = claves(e.descuentos)
+             // dentro de descuentos que los descuentos esten entre 0 y 100 (sin incluir)
+                (paratodo i: item)(def?(i, e.descuentos) =>L ((paratodo cant: cantidad)(def?(cant, obtener(i, e.descuentos)) =>L 0 < obtener(cant, obtener(i, e.descuentos)) < 100)))
+             // Los items de rangosDescuentosxItem estan dentro del menú.
+                claves(e.rangosDescuentosxItem) incluido claves(e.precios)
+             // Dentro de rangosDescuentosxItem cada cantidad de un item debe ser menor o igual a la anterior y ademas debe estar registrada dentro de los descuentos de ese item en descuentos.
+                (paratodo i:item)(def?(i, e.rangosDescuentosxItem) =>L (paratodo n: nat)(0 <= n < long(obtener(i, e.rangosDescuentosxItem)) - 1 =>L (obtener(i, e.rangosDescuentosxItem)[n] <= obtener(i, e.rangosDescuentosxItem)[n+1] & obtener(i, e.rangosDescuentosxItem)[n] pertenece claves(obtener(i, e.descuentos)))))
+             // Cada persona de ventasConPromo debe estar registrada en gastoTotal
+                (paratodo p: persona)(def?(p, e.ventasConPromo) =>L def?(p, e.gastoTotal))
+             // Cada tupla de la lista enlazada perteneciente a ventasConPromo tiene su item definido en descuentos y su cantidad es mayor o igual a la cantidad minima para obtener el descuento de ese item en el puesto.
+                (paratodo p: persona)(def?(p, e.ventasConPromo) =>L (paratodo n: nat)(0 <= n < long(obtener(p, e.ventasConPromo)) =>L (pi0(obtener(p, e.ventasConPromo)[i]) e claves(e.descuentos) & pi1(obtener(p, e.ventasConPromo)[i]) >= obtener(pi0(obtener(p, e.ventasConPromo)[i]), e.rangosDescuentosxItem)[0])))
+                //Acá obtener(p, e.ventasConPromo)[i]), e.rangosDescuentosxItem)[0]) nos retorna la cantidad minima para un descuento ya que en la posicion 0 se encuentra la cantidad mas pequeña para un descuento en la compra de ese item.
+             // Cada persona de ventasSinPromo debe estar dentro de las claves de gastoTotal
+                (paratodo p: persona)(def?(p, e.ventasSinPromo) =>L def?(p, e.gastoTotal))
+             // Cada item de ventasSinPromo pertenece a las claves de precios y las cantidades de la lista enlazada son menores que la cantidad minima para obtener un descuento en ese item.
+                (paratodo p: persona)(def?(p, e.ventasSinPromo) =>L (paratodo i: item)(def?(i, obtener(p, e.ventasSinPromo)) =>L obtener(i, obtener(p, e.ventasSinPromo)) e claves(e.descuentos) =>L (paratodo n: nat)(0 <= n < long(obtener(i, obtener(p, e.ventasSinPromo))) =>L obtener(i, obtener(p, e.ventasSinPromo))[n] < obtener(i, e.rangosDescuentosxItem)[0])))
+                //Similar al anterior solo que pido que la cantidad sea menor que el minimo necesario para obtener un descuento en la compra de ese item.
+             // gastoTotal de una persona es la suma de ventasConPromo y ventasSinPromo de esa persona.
+                (paratodo p: persona)(def?(p, e.gastoTotal) =>L sumaGastosSinPromo(p) + sumaGastosConPromo(p) = obtener(p, e.gastoTotal))
+
+    
+    Abs(e) = // puesto es pdc: menu(pdc) = claves(precios) && (paratodo i: item)(precio(pdc, i) = obtener(estr.precios, i)) &&  (paratodo i: item)(stock(pdc, i) = obtener(estr.stock, i)) &&
+    // (paratodo i: item, cant:cantidad)(descuento(pdc, i, c) = obtener(obtener(estr.descuentos, i), cant))
+    // (paratodo p: persona)(ventas(pdc, p) = sumarVentasyPasarAMulticonjunto(estr.ventasSinPromo, estr.ventasConPromo))
+
+        menu(pdc) = claves(e.precios) && 
+        (paratodo i: item)(precio(pdc, i) = obtener(estr.precios, i)) &&
+        (paratodo i: item)(stock(pdc, i) = obtener(estr.stock, i)) && 
+        (paratodo i: item, cant:cantidad)(descuento(pdc, i, cant) = obtener(cant, obtener(i, estr.descuentos))) &&
+        (paratodo p: persona)(ventas(pdc, p) = sumarVentasyPasarAMulticonjunto(estr.ventasSinPromo, estr.ventasConPromo))
+
+        //    Puesto se representa con estr donde
+        //         estr = <
+        //                 precios: dicclog(item, nat),
+        //                 stock: dicclog(item, nat),
+        //                 descuentos: dicclog(item, dicc(cantidad, nat)),
+        //                 rangosDescuentosxItem: diccLog(item, vector(cantidad)), 
+        //                 ventasConPromo: dicclog(persona, listaEnlazada(tupla(item, cantidad))),
+        //                 ventasSinPromo: diccLog(persona, dicLog(item, listaEnlazada(cantidad))),
+        //                 gastoTotal: dicclog(persona, nat)
+        //                 >
+
+
+    aux sumarGastosConPromo(precios: dicc(item, dinero), listaDeVentas: secu(tupla(item, cantidad))) : dinero = sumatoria(indice: i, inicio: 0, tope: long(listaDeVentas) - 1){
+
+        pi1(listaDeVentas[i]) * obtener(pi0(listaDeVentas[i]), precios)
+    }
+
+    aux sumarGastosSinPromo(precios: dicc(item, dinero), listaDeVentas: secu(cantidad), listaDeItems: secu(item)) : dinero = sumatoria(indice i, inicio:0, tope: long(listaDeItems - 1)){ sumatoria(indice j, inicio: 0, tope: long(listaDeVentas) - 1) {obtener(listaDeItems[i], precios) * listaDeVentas[j]}}
+
+    aux pasarClavesDeConjASecuencia(clavesItems: conj(item)) : secu(item) = 
+
+

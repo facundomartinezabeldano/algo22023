@@ -477,8 +477,8 @@ Implementacion Puesto:
 
                     else{
 
-                        definir(estr.ventas, p, Vacio()); //O(log(A)) donde A es cantidad de claves de ventas.
-                        AgregarAdelante(significado(estr.ventas, p), (i, cant)); //O(log(A))
+                        definir(estr.ventasConPromo, p, Vacio()); //O(log(A)) donde A es cantidad de claves de ventas.
+                        AgregarAdelante(significado(estr.ventasConPromo, p), (i, cant)); //O(log(A))
                         definir(estr.gastoTotal, p, nuevoGasto); //O(log(m)) donde m es cantidad de claves de gastoTotal. Pero como la cantidad de claves es la misma que la de ventas queda O(log(A)).
                     }
                 }
@@ -550,17 +550,21 @@ Implementacion Puesto:
             descuentos = significado(estr.descuentos, i); //O(log(I))
             rangoDescuentos = significado(estr.rangosDescuentosxItem, i); //O(log(I)) en el peor caso tengo tantos descuentos como variedades de items tenga.
 
-           if(Primero(rangoDescuentos) <= cant <= Ultimo(rangoDescuentos)){ //O(log(Cant))
+            if(!vacia?(rangoDescuentos)){ //O(log(Cant))
+                
+                
+                if(rangoDescuentos[0] <= cant <= Ultimo(rangoDescuentos)){ //O(log(Cant))
 
-                claveCantidad = rangoDescuentos[cant]; //O(1)
-                return Significado(descuentos, claveCantidad); //O(log(Cant))
-           }
+                        claveCantidad = rangoDescuentos[cant]; //O(1)
+                        return Significado(descuentos, claveCantidad); //O(log(Cant))
+                }
 
-           else if(cant > Ultimo(rangoDescuentos)){ //O(log(Cant))
+                else if(cant > Ultimo(rangoDescuentos)){ //O(log(Cant))
 
-                claveCantidad = Ultimo(rangoDescuentos) //O(1)
-                return Significado(descuentos, claveCantidad); //O(log(Cant))
-           }
+                        claveCantidad = Ultimo(rangoDescuentos) //O(1)
+                        return Significado(descuentos, claveCantidad); //O(log(Cant))
+                }
+            }
 
            return 0; //O(1)
         }

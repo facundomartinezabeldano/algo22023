@@ -22,7 +22,7 @@ Implementacion Lolla:
 
         HackearLolla(inout l: lolla, in p: persona, in i: item)
 
-            pre:{l = l0 & p e personas(l) & consumioSinPromoEnAlgunPuesto(l, p, i)}
+            pre:{l = l0 & p e personas(l) & itemPerteneceAAlgunPuesto(puestos(l), i) & consumioSinPromoEnAlgunPuesto(l, p, i)}
             post:{l = hackear(l0, p, i)}
             Complejidad: O(log(A) + log(I)) || O(log(A) + log(I) + log(P))
             Descripcion: Dado un lolla, una persona valida y un item. Si la persona consumio ese item sin descuento, se le resta una unidad
@@ -52,9 +52,9 @@ Implementacion Lolla:
             Aliasing: Devuelve una copia del gasto total de la persona.
             Descripcion: Dado un lolla y una persona, retorna el gasto total de la persona en el lolla.
 
-        PersonaQueMasGasto(in l: lolla, in ps: conj(persona)) -> res:persona
+        PersonaQueMasGasto(in l: lolla) -> res:persona
 
-            pre:{ps = personas(l) && !vacio?(ps)}
+            pre:{true}
             post:{res = masGasto(l)}
             Complejidad: O(1)
             Aliasing: Devuelve una copia de la persona que mas gasto.
@@ -138,7 +138,12 @@ Implementacion Lolla:
 
             if(significado(estr.gastosPersonas, p) >= significado(estr.gastosPersonas, estr.personaQueMasGasto)){ //O(log(A))
 
-                if(p > estr.personaQueMasGasto){ //O(1)
+                if(significado(estr.gastosPersonas, p) > significado(estr.gastosPersonas, estr.personaQueMasGasto)){//O(log(A))
+
+                    estr.personaQueMasGasto = p //O(1)
+                }
+
+                else if(p > estr.personaQueMasGasto){ //O(1)
 
                     estr.personaQueMasGasto = p; //O(1)
                 }
@@ -167,7 +172,7 @@ Implementacion Lolla:
                     else{ //O(log(A) + log(I) + log(P))
                         
                         diccionarioPuestos = Significado(Significado(estr.comprasSinDescuentoPorPersona, p), i); //O(log(A) + log(I))
-                        if(!Definido?(diccionarioPuestos, puestoId)){
+                        if(!Definido?(diccionarioPuestos, puestoId)){ //O(log(P))
 
                             Definir(diccionarioPuestos, puestoId, puesto); //O(log(P))
                         }
